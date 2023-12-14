@@ -1,0 +1,1 @@
+ros2 launch nav2_bringup tb3_simulation_launch.py params_file:=nav2_params.yaml rviz_config_file:=rvizconf.rviz map:=my_map.yaml

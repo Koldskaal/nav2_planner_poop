@@ -45,7 +45,6 @@
 #include <visualization_msgs/msg/marker.hpp>
 
 #include "nav2_rrt_planner/rrt_planner.hpp"
-#include "nav2_rrt_planner/collision_checker.hpp"
 
 namespace nav2_rrt_planner
 {
@@ -65,13 +64,8 @@ namespace nav2_rrt_planner
     tf_ = tf;
     costmap_ = costmap_ros->getCostmap();
     global_frame_ = costmap_ros->getGlobalFrameID();
-    // _collision_checker = GridCollisionChecker(costmap_, 1 /*for 2D, most be 1*/, node_);
-    // _collision_checker.setFootprint(
-    //     costmap_ros->getRobotFootprint(),
-    //     true /*for 2D, most use radius*/,
-    //     0.0 /*for 2D cost at inscribed isn't relevent*/);
     _collision_checker = nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *>(costmap_);
-
+    _collision_checker.setCostmap(costmap_);
     // Parameter initialization
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".interpolation_resolution", rclcpp::ParameterValue(0.1));
@@ -107,7 +101,6 @@ namespace nav2_rrt_planner
       const geometry_msgs::msg::PoseStamped &goal)
   {
     nav_msgs::msg::Path global_path;
-    _collision_checker.setCostmap(costmap_);
 
     // Checking if the goal and start state is in the global frame
     if (start.header.frame_id != global_frame_)
@@ -216,8 +209,6 @@ namespace nav2_rrt_planner
       costmap_->worldToMap(x, y, xm, ym);
       costmap_->worldToMap(point_list[nearest_neighbour]->x, point_list[nearest_neighbour]->y, nearest_neighbour_xm, nearest_neighbour_ym);
       auto colliding = _collision_checker.lineCost(xm, nearest_neighbour_xm, ym, nearest_neighbour_ym) > MAX_NON_OBSTACLE;
-      RCLCPP_INFO(
-          node_->get_logger(), "Colliding: %d, Cost; %f", colliding, _collision_checker.lineCost(xm, nearest_neighbour_xm, ym, nearest_neighbour_ym));
 
       geometry_msgs::msg::Point point;
       point.x = x;

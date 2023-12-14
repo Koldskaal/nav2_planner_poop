@@ -53,10 +53,16 @@
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 #include "nav2_costmap_2d/costmap_2d_ros.hpp"
-#include "nav2_rrt_planner/collision_checker.hpp"
+#include "nav2_costmap_2d/footprint_collision_checker.hpp"
 
 namespace nav2_rrt_planner
 {
+  const float UNKNOWN = 255.0;
+  const float OCCUPIED = 254.0;
+  const float INSCRIBED = 253.0;
+  const float MAX_NON_OBSTACLE = 252.0;
+  const float FREE = 0;
+
   class RRT : public nav2_core::GlobalPlanner
   {
   public:

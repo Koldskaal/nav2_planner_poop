@@ -50,7 +50,6 @@ set(dependencies
 
 add_library(${library_name} SHARED
   src/rrt_planner.cpp
-  src/collision_checker.cpp
 )
 
 ament_target_dependencies(${library_name}
