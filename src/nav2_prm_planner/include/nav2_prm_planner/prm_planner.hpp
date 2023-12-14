@@ -66,15 +66,20 @@ namespace nav2_prm_planner
 
   struct Point
   {
-    unsigned int x;
-    unsigned int y;
+    int x;
+    int y;
   };
   struct Edge
   {
     unsigned int destination;
     float cost;
   };
-
+  struct Node
+  {
+    nav2_prm_planner::Point point;
+    int parent;
+    int index;
+  };
   class PRM : public nav2_core::GlobalPlanner
   {
   public:

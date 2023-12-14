@@ -279,7 +279,7 @@ planner_server:
     use_sim_time: True
     GridBased:
       plugin: "nav2_prm_planner/PRM"
-      max_edge_length: 30.0
+      max_edge_length: 10.0
       max_iter: 500
 
 smoother_server:
