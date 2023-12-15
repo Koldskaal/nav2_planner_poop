@@ -39,6 +39,7 @@
  *********************************************************************/
 
 #include <cmath>
+#include <queue>
 #include <string>
 #include <memory>
 #include "nav2_util/node_utils.hpp"
@@ -110,7 +111,6 @@ namespace nav2_prm_planner
 
         nav2_prm_planner::Point newPoint = {xm, ym};
         nodes.push_back(newPoint);
-        
       }
 
       edges = std::vector<std::vector<nav2_prm_planner::Edge>>((int)nodes.size());
@@ -139,15 +139,12 @@ namespace nav2_prm_planner
           }
           Edge newEdge = {j, dist};
           edges[i].push_back(newEdge);
-
-          
         }
       }
-
     }
 
-{
-  std_msgs::msg::ColorRGBA color;
+    {
+      std_msgs::msg::ColorRGBA color;
       color.a = 1;
       color.r = 0;
       color.g = 0.5;
@@ -173,8 +170,8 @@ namespace nav2_prm_planner
       lineMarker.id = 2;
       lineMarker.scale.x = 0.01;
       lineMarker.color = color;
-    for (size_t i = 0; i < nodes.size(); i++)
-    {
+      for (size_t i = 0; i < nodes.size(); i++)
+      {
         double x, y;
         costmap_->mapToWorld(nodes[i].x, nodes[i].y, x, y);
         geometry_msgs::msg::Point point;
@@ -182,9 +179,10 @@ namespace nav2_prm_planner
         point.y = y;
         point.z = x;
         markerPoint.points.push_back(point);
-        for (auto &&edge : edges[i]){
+        for (auto &&edge : edges[i])
+        {
 
-        geometry_msgs::msg::Point pp1;
+          geometry_msgs::msg::Point pp1;
           double x1, x2, y1, y2;
           costmap_->mapToWorld(nodes[edge.destination].x, nodes[edge.destination].y, x1, y1);
           costmap_->mapToWorld(nodes[i].x, nodes[i].y, x2, y2);
@@ -198,13 +196,11 @@ namespace nav2_prm_planner
           lineMarker.points.push_back(pp2);
           lineMarker.points.push_back(pp1);
         }
-        
-    }
+      }
       publisher->publish(lineMarker);
       publisher->publish(markerPoint);
-    
     }
-    
+
     nav_msgs::msg::Path global_path;
 
     // Checking if the goal and start state is in the global frame
@@ -231,8 +227,8 @@ namespace nav2_prm_planner
     unsigned int starty;
     unsigned int goalx;
     unsigned int goaly;
-    costmap_->worldToMap(start.pose.position.x,start.pose.position.y,startx,starty);
-    costmap_->worldToMap(goal.pose.position.x,goal.pose.position.y,goalx,goaly);
+    costmap_->worldToMap(start.pose.position.x, start.pose.position.y, startx, starty);
+    costmap_->worldToMap(goal.pose.position.x, goal.pose.position.y, goalx, goaly);
     int closest_to_start = -1;
     float dist_to_start = 10000;
     int closest_to_goal = -1;
@@ -241,134 +237,129 @@ namespace nav2_prm_planner
     {
       // Find closest node to start
       //     Find closest node to start
-      float cur_dist = std::hypot((int)startx-(int)nodes[i].x,(int)starty-(int)nodes[i].y);
-      RCLCPP_INFO(
-        node_->get_logger(), "Start point dist %f | %d %d", cur_dist,startx-nodes[i].x,starty-nodes[i].y
-        );
-      if (cur_dist<dist_to_start && _collision_checker.lineCost(startx,nodes[i].x,starty,nodes[i].y) <=MAX_NON_OBSTACLE)
+      float cur_dist = std::hypot((int)startx - (int)nodes[i].x, (int)starty - (int)nodes[i].y);
+      if (cur_dist < dist_to_start && _collision_checker.lineCost(startx, nodes[i].x, starty, nodes[i].y) <= MAX_NON_OBSTACLE)
       {
         closest_to_start = i;
         dist_to_start = cur_dist;
       }
-      cur_dist = std::hypot((int)goalx-(int)nodes[i].x,(int)goaly-(int)nodes[i].y);
-      if (cur_dist<dist_to_goal && _collision_checker.lineCost(goalx,nodes[i].x,goaly,nodes[i].y) <=MAX_NON_OBSTACLE)
+      cur_dist = std::hypot((int)goalx - (int)nodes[i].x, (int)goaly - (int)nodes[i].y);
+      if (cur_dist < dist_to_goal && _collision_checker.lineCost(goalx, nodes[i].x, goaly, nodes[i].y) <= MAX_NON_OBSTACLE)
       {
         closest_to_goal = i;
         dist_to_goal = cur_dist;
       }
     }
-    if (closest_to_goal <0 || closest_to_start < 0)
+    if (closest_to_goal < 0 || closest_to_start < 0)
     {
       RCLCPP_ERROR(
-        node_->get_logger(), "NO CONNECTION TO GOAL OR START"
-        );
+          node_->get_logger(), "NO CONNECTION TO GOAL OR START");
       return global_path;
     }
-    
     std::vector<Node> dijkstra;
-    Node startnode = {nodes[closest_to_start],-1,closest_to_start};
-    dijkstra.push_back(startnode);
-
-
-    
-
-
-// List of visited nodes [Startnode]
-// While goal not found
-//   smallest dist = INFINITY
-//   for x in list of visited nodes
-//     find smallest distance vertex (only to non visited nodes)
-//       save Node index
-//       save destination index
-//   add nodes to list of visited nodes
-//   Set parent of desination index to Node index
-//   if node = goal
-//     goal found
-for (size_t p = 0; p < nodes.size(); p++)
-{
-  float smallest_cost = 100000;
-  int closest_dest = -1;
-  int parent = -1;
-  bool any = false;
-  for (size_t i = 0; i < dijkstra.size(); i++)
-  {
-    for (auto &&edge : edges[dijkstra[i].index])
+    for (int i = 0; i < nodes.size(); i++)
     {
-      bool valid = true;
-      for (size_t k = 0; k < dijkstra.size(); k++)
-      {
-        if (edge.destination == dijkstra[k].index)
-        {
-          valid = false;
-        }
-        
-      }
-      if (valid && edge.cost < smallest_cost)
-      {
-        smallest_cost = edge.cost;
-        closest_dest = edge.destination;
-        parent = i;
-        any = true;
-      }
-      
+      Node startnode = {nodes[i], -1, i, 1000000};
+      dijkstra.push_back(startnode);
     }
-    
-  }
-  if (!any){
-          RCLCPP_ERROR(
-        node_->get_logger(), "DIJKSTRA FAILED"
-        );
-      return global_path;
-  }
-  Node next_node = {nodes[closest_dest],parent,closest_dest};
-  dijkstra.push_back(next_node);
-  if (closest_dest == closest_to_goal)
-  {
-          RCLCPP_INFO(
-        node_->get_logger(), "DIJKSTRA PATH FINDING SUCCESS"
-        );
-    break;
-  }
-  
-}
-std::vector<geometry_msgs::msg::PoseStamped, std::allocator<geometry_msgs::msg::PoseStamped>> temp;
-geometry_msgs::msg::PoseStamped pose;
-pose.pose.position.x = goal.pose.position.x;
-pose.pose.position.y = goal.pose.position.y;
-pose.pose.position.z = 0.0;
-pose.pose.orientation.x = 0.0;
-pose.pose.orientation.y = 0.0;
-pose.pose.orientation.z = 0.0;
-pose.pose.orientation.w = 1.0;
-pose.header.stamp = node_->now();
-pose.header.frame_id = global_frame_;
-temp.push_back(pose);
-nav2_prm_planner::Node curr = dijkstra[dijkstra.size()-1];
-while (curr.parent!=-1)
-{
-  double x,y;
-  costmap_->mapToWorld(curr.point.x,curr.point.y,x,y);
-  geometry_msgs::msg::PoseStamped pose;
-  pose.pose.position.x = x;
-  pose.pose.position.y = y;
-  pose.pose.position.z = 0.0;
-  pose.pose.orientation.x = 0.0;
-  pose.pose.orientation.y = 0.0;
-  pose.pose.orientation.z = 0.0;
-  pose.pose.orientation.w = 1.0;
-  pose.header.stamp = node_->now();
-  pose.header.frame_id = global_frame_;
-  curr = dijkstra[curr.parent];
-  temp.push_back(pose);
-}
+    dijkstra[closest_to_start].distance = 0;
+    std::queue<int> tovisit;
+    tovisit.push(closest_to_start);
 
-for (int i = temp.size() - 1; i >= 0; i--)
-{
-  RCLCPP_INFO(
-      node_->get_logger(), "%f", temp[i].pose.position.x);
-  global_path.poses.push_back(temp[i]);
-}
-// Loop backwards through nodes and set path
+    std::vector<int> visited;
+    visited.push_back(closest_to_start);
+    // List of visited nodes [Startnode]
+    // While goal not found
+    //   smallest dist = INFINITY
+    //   for x in list of visited nodes
+    //       save Node index
+    //       save destination index
+    //   add nodes to list of visited nodes
+    //   Set parent of desination index to Node index
+    //   if node = goal
+    //     goal found
+    for (size_t p = 0; p < nodes.size(); p++)
+    {
+      if (tovisit.size() == 0)
+      {
+        RCLCPP_INFO(
+            node_->get_logger(), "NO MORE QUEUE");
+        break;
+      }
+      int next_visit = tovisit.front();
+      RCLCPP_INFO(
+          node_->get_logger(), "visited size %ld and queue size %ld", visited.size(), tovisit.size());
+      tovisit.pop();
+
+      for (auto &&edge : edges[next_visit])
+      {
+        bool add_to_queue = true;
+        for (size_t k = 0; k < visited.size(); k++)
+        {
+          if (edge.destination == visited[k])
+          {
+            add_to_queue = false;
+          }
+        }
+        if (add_to_queue)
+        {
+          tovisit.push(edge.destination);
+          visited.push_back(edge.destination);
+        }
+
+        if (edge.cost + dijkstra[next_visit].distance < dijkstra[edge.destination].distance)
+        {
+          dijkstra[edge.destination].distance = edge.cost + dijkstra[next_visit].distance;
+          dijkstra[edge.destination].parent = next_visit;
+        }
+      }
+    }
+
+    if (dijkstra[closest_to_goal].parent < 0)
+    {
+      RCLCPP_INFO(
+          node_->get_logger(), "DIJKSTRA FAILED SADGE");
+      return global_path;
+    }
+
+    std::vector<geometry_msgs::msg::PoseStamped, std::allocator<geometry_msgs::msg::PoseStamped>> temp;
+    geometry_msgs::msg::PoseStamped pose;
+    pose.pose.position.x = goal.pose.position.x;
+    pose.pose.position.y = goal.pose.position.y;
+    pose.pose.position.z = 0.0;
+    pose.pose.orientation.x = 0.0;
+    pose.pose.orientation.y = 0.0;
+    pose.pose.orientation.z = 0.0;
+    pose.pose.orientation.w = 1.0;
+    pose.header.stamp = node_->now();
+    pose.header.frame_id = global_frame_;
+    temp.push_back(pose);
+    nav2_prm_planner::Node curr = dijkstra[closest_to_goal];
+    while (curr.parent != -1)
+    {
+      double x, y;
+      costmap_->mapToWorld(curr.point.x, curr.point.y, x, y);
+      geometry_msgs::msg::PoseStamped pose;
+      pose.pose.position.x = x;
+      pose.pose.position.y = y;
+      pose.pose.position.z = 0.0;
+      pose.pose.orientation.x = 0.0;
+      pose.pose.orientation.y = 0.0;
+      pose.pose.orientation.z = 0.0;
+      pose.pose.orientation.w = 1.0;
+      pose.header.stamp = node_->now();
+      pose.header.frame_id = global_frame_;
+      curr = dijkstra[curr.parent];
+      temp.push_back(pose);
+    }
+
+    for (int i = temp.size() - 1; i >= 0; i--)
+    {
+      RCLCPP_INFO(
+          node_->get_logger(), "%f", temp[i].pose.position.x);
+      global_path.poses.push_back(temp[i]);
+    }
+    // Loop backwards through nodes and set path
 
     // calculating the number of loops for current value of interpolation_resolution_
 

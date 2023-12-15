@@ -79,6 +79,7 @@ namespace nav2_prm_planner
     nav2_prm_planner::Point point;
     int parent;
     int index;
+    float distance;
   };
   class PRM : public nav2_core::GlobalPlanner
   {
