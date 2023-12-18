@@ -102,7 +102,7 @@ namespace nav2_rrt_planner
     // The global frame of the costmap
     std::string global_frame_, name_;
 
-    double interpolation_resolution_;
+    double RRT_length;
     int _max_iter;
     nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *> _collision_checker;
   };

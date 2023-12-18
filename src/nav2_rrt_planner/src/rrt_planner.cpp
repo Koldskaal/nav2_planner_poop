@@ -68,8 +68,8 @@ namespace nav2_rrt_planner
     _collision_checker.setCostmap(costmap_);
     // Parameter initialization
     nav2_util::declare_parameter_if_not_declared(
-        node_, name_ + ".interpolation_resolution", rclcpp::ParameterValue(0.1));
-    node_->get_parameter(name_ + ".interpolation_resolution", interpolation_resolution_);
+        node_, name_ + ".RRT_step_length", rclcpp::ParameterValue(0.1));
+    node_->get_parameter(name_ + ".RRT_step_length", RRT_length);
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".max_iter", rclcpp::ParameterValue(10000));
     node_->get_parameter(name_ + ".max_iter", _max_iter);
@@ -199,11 +199,11 @@ namespace nav2_rrt_planner
       double delta_y = y - point_list[nearest_neighbour]->y;
       // clip node and add parent ^
       // auto angle = std::atan2(delta_x, delta_y);
-      if (smallest_dist > interpolation_resolution_)
+      if (smallest_dist > RRT_length)
       {
 
-        x = point_list[nearest_neighbour]->x + interpolation_resolution_ * delta_x / smallest_dist;
-        y = point_list[nearest_neighbour]->y + interpolation_resolution_ * delta_y / smallest_dist;
+        x = point_list[nearest_neighbour]->x + RRT_length * delta_x / smallest_dist;
+        y = point_list[nearest_neighbour]->y + RRT_length * delta_y / smallest_dist;
       }
       unsigned int nearest_neighbour_xm, nearest_neighbour_ym;
       costmap_->worldToMap(x, y, xm, ym);
@@ -240,7 +240,7 @@ namespace nav2_rrt_planner
         marker.points.push_back(p2);
         marker.points.push_back(p1);
 
-        if (std::hypot(goal.pose.position.x - x, goal.pose.position.y - y) <= interpolation_resolution_)
+        if (std::hypot(goal.pose.position.x - x, goal.pose.position.y - y) <= RRT_length)
         {
           publisher->publish(marker);
           publisher->publish(markerPoint);

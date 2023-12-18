@@ -122,6 +122,7 @@ namespace nav2_prm_planner
 
     double _max_edge_length;
     int _max_iter;
+    float _inflation_multiplier;
     nav2_costmap_2d::FootprintCollisionChecker<nav2_costmap_2d::Costmap2D *> _collision_checker;
 
     std::vector<nav2_prm_planner::Point> nodes;

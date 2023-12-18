@@ -68,6 +68,9 @@ namespace nav2_prm_planner
     nav2_util::declare_parameter_if_not_declared(
         node_, name_ + ".max_iter", rclcpp::ParameterValue(10000));
     node_->get_parameter(name_ + ".max_iter", _max_iter);
+    nav2_util::declare_parameter_if_not_declared(
+        node_, name_ + ".inflation_multiplier", rclcpp::ParameterValue(1.0));
+    node_->get_parameter(name_ + ".inflation_multiplier", _inflation_multiplier);
   }
 
   void PRM::cleanup()
@@ -101,7 +104,9 @@ namespace nav2_prm_planner
 
     if (nodes.size() == 0)
     {
+      // ################### //
       // Make the roadmap
+      // ################### //
       for (size_t i = 0; i < _max_iter; i++)
       {
         unsigned int xm = std::rand() % costmap_->getSizeInCellsX();
@@ -112,13 +117,13 @@ namespace nav2_prm_planner
         nav2_prm_planner::Point newPoint = {xm, ym};
         nodes.push_back(newPoint);
       }
-
       edges = std::vector<std::vector<nav2_prm_planner::Edge>>((int)nodes.size());
 
       for (size_t i = 0; i < nodes.size(); i++)
       {
+        // ################### //
         // do connection search
-
+        // ################### //
         for (unsigned int j = 0; j < nodes.size(); j++)
         {
           if (j == i)
@@ -131,18 +136,20 @@ namespace nav2_prm_planner
           {
             continue;
           }
-
-          auto colliding = _collision_checker.lineCost(p1.x, p2.x, p1.y, p2.y) > MAX_NON_OBSTACLE;
+          double line_cost = _collision_checker.lineCost(p1.x, p2.x, p1.y, p2.y);
+          auto colliding = line_cost > MAX_NON_OBSTACLE;
           if (colliding)
           {
             continue;
           }
-          Edge newEdge = {j, dist};
+          Edge newEdge = {j, dist * (1 + _inflation_multiplier * line_cost / 252)};
           edges[i].push_back(newEdge);
         }
       }
     }
-
+    // ################### //
+    // Marker stuff //
+    // ################### //
     {
       std_msgs::msg::ColorRGBA color;
       color.a = 1;
@@ -235,14 +242,20 @@ namespace nav2_prm_planner
     float dist_to_goal = 10000;
     for (size_t i = 0; i < nodes.size(); i++)
     {
+      // ################### //
       // Find closest node to start
-      //     Find closest node to start
+      // ################### //
+
       float cur_dist = std::hypot((int)startx - (int)nodes[i].x, (int)starty - (int)nodes[i].y);
       if (cur_dist < dist_to_start && _collision_checker.lineCost(startx, nodes[i].x, starty, nodes[i].y) <= MAX_NON_OBSTACLE)
       {
         closest_to_start = i;
         dist_to_start = cur_dist;
       }
+      // ################### //
+      //     Find closest node to goal
+      // ################### //
+
       cur_dist = std::hypot((int)goalx - (int)nodes[i].x, (int)goaly - (int)nodes[i].y);
       if (cur_dist < dist_to_goal && _collision_checker.lineCost(goalx, nodes[i].x, goaly, nodes[i].y) <= MAX_NON_OBSTACLE)
       {
@@ -263,21 +276,19 @@ namespace nav2_prm_planner
       dijkstra.push_back(startnode);
     }
     dijkstra[closest_to_start].distance = 0;
+    // Make queue of nodes to visit
     std::queue<int> tovisit;
+    // Push closest node to start to the queue
     tovisit.push(closest_to_start);
 
+    // Make list to avoid checking nodes twice
     std::vector<int> visited;
     visited.push_back(closest_to_start);
-    // List of visited nodes [Startnode]
-    // While goal not found
-    //   smallest dist = INFINITY
-    //   for x in list of visited nodes
-    //       save Node index
-    //       save destination index
-    //   add nodes to list of visited nodes
-    //   Set parent of desination index to Node index
-    //   if node = goal
-    //     goal found
+
+    // ################### //
+    // Full dijkstra loop
+    // ################### //
+
     for (size_t p = 0; p < nodes.size(); p++)
     {
       if (tovisit.size() == 0)
